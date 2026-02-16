@@ -1,0 +1,28 @@
+---
+import type { CollectionEntry } from "astro:content";
+import IconGitHub from "@/assets/icons/IconGitHub.svg";
+
+type Props = {
+  example: CollectionEntry<"examples">;
+};
+
+const { example } = Astro.props;
+const { title, description, slug, repoPath } = example.data;
+---
+
+<aside class="my-6 rounded border border-border bg-muted/25 p-4">
+  <div class="mb-2 text-sm font-semibold uppercase tracking-wide opacity-70">
+    Runnable Example
+  </div>
+  <a
+    href={`/examples/${slug}/`}
+    class="text-lg font-medium text-accent decoration-dashed underline-offset-4 hover:underline"
+  >
+    {title}
+  </a>
+  <p class="mt-1 text-sm opacity-80">{description}</p>
+  <div class="mt-2 flex items-center gap-2 text-sm opacity-70">
+    <IconGitHub class="inline-block size-4" />
+    <code>{repoPath}</code>
+  </div>
+</aside>
