@@ -1,0 +1,8 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tomazfernandes-dev",
+  "compatibility_date": "2026-02-16",
+  "assets": {
+    "directory": "./dist"
+  }
+}
