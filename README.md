@@ -6,18 +6,20 @@ Monorepo for [tomazfernandes.dev](https://tomazfernandes.dev) — a static techn
 
 ```
 tomazfernandes-dev/
-├── site/                        # Astro project (blog, pages, styles)
-│   ├── src/data/blog/           # Blog posts (Markdown)
+├── posts/                       # Blog posts (Markdown) — © 2026 Tomaz Fernandes
+├── site/                        # Astro project (blog, pages, styles) — MIT
 │   ├── src/data/examples/       # Example metadata (Markdown)
 │   ├── src/components/          # Astro components
 │   ├── src/layouts/             # Page layouts
 │   ├── src/pages/               # Route pages
 │   └── src/utils/               # Utility functions
-├── examples/                    # Runnable example projects (Spring Boot, Docker Compose, etc.)
+├── examples/                    # Runnable example projects — MIT
+├── LICENSE                      # MIT License (code and site source)
+├── CONTENT_LICENSE.md           # All rights reserved (blog posts)
 └── README.md
 ```
 
-The **site** contains the Astro blog. **examples** holds standalone projects referenced by blog posts.
+The `site/` directory contains the Astro blog. The `examples/` directory holds standalone projects referenced by posts.
 
 ## Development
 
@@ -38,27 +40,6 @@ npm run dev       # Start dev server at localhost:4321
 | `npm run format` | Format code with Prettier |
 | `npm run format:check` | Check formatting |
 | `npm run lint` | Lint with ESLint |
-
-## Adding a Blog Post
-
-1. Create a new file in `site/src/data/blog/` named `yyyy-mm-dd-slug.md`
-2. Add front matter:
-
-```yaml
----
-title: "Your Post Title"
-slug: "your-post-slug"
-description: "A short description for SEO and cards."
-pubDatetime: 2025-02-01T00:00:00Z
-tags: ["spring-boot", "aws"]
-draft: false
-examples: ["related-example-slug"]
----
-```
-
-3. Write your content in Markdown. Mermaid diagrams are supported via fenced code blocks with the `mermaid` language tag.
-
-**URL convention:** Posts are served at `/posts/<slug>/` where `slug` comes from the front matter, not the filename. Dated filenames are for filesystem sorting only.
 
 ## Adding an Example Project
 
@@ -101,4 +82,5 @@ postSlugs: ["related-post-slug"]
 
 ## License
 
-MIT
+- **Code and site source** (`/site`, `/examples`, and any other code) — [MIT License](LICENSE).
+- **Blog posts and written content** (`/posts`) — © 2026 Tomaz Fernandes. All rights reserved. See [CONTENT_LICENSE.md](CONTENT_LICENSE.md).

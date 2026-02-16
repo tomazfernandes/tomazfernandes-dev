@@ -3,14 +3,12 @@ import { getCollection } from "astro:content";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
-import Socials from "@/components/Socials.astro";
 import LinkButton from "@/components/LinkButton.astro";
 import Card from "@/components/Card.astro";
 import getSortedPosts from "@/utils/getSortedPosts";
 import IconRss from "@/assets/icons/IconRss.svg";
 import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
 import { SITE } from "@/config";
-import { SOCIALS } from "@/constants";
 
 const posts = await getCollection("blog");
 
@@ -22,7 +20,7 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
 <Layout>
   <Header />
   <main id="main-content" data-layout="index" class="app-layout">
-    <section id="hero" class:list={["pt-8 pb-6", "border-b border-border"]}>
+    <section id="hero" class:list={["pt-8 pb-6", "border-b border-border dark:border-opacity-30"]}>
       <div class="flex items-center gap-4 sm:gap-6">
         <img
           src="/images/profile.jpeg"
@@ -30,46 +28,46 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
           class="size-20 rounded-full object-cover sm:size-24"
         />
         <div>
-          <h1 class="inline-block text-4xl font-bold sm:text-5xl">
-            Tomaz Fernandes
+          <h1 class="text-3xl font-bold sm:text-4xl">
+            Pragmatic Distributed Systems
           </h1>
-          <a
-            target="_blank"
-            href="/rss.xml"
-            class="ms-2 inline-block"
-            aria-label="rss feed"
-            title="RSS Feed"
-          >
-            <IconRss
-              width={20}
-              height={20}
-              class="scale-125 stroke-accent stroke-3 rtl:-rotate-90"
-            />
-            <span class="sr-only">RSS Feed</span>
-          </a>
+          <p class="inline-flex items-center gap-2 text-lg opacity-75">by Tomaz Fernandes
+            <a
+              target="_blank"
+              href="/rss.xml"
+              aria-label="rss feed"
+              title="RSS Feed"
+            >
+              <IconRss
+                width={16}
+                height={16}
+                class="stroke-accent stroke-3 rtl:-rotate-90"
+              />
+              <span class="sr-only">RSS Feed</span>
+            </a>
+          </p>
         </div>
       </div>
 
-      <p class="mt-4">
-        Notes on distributed systems: reliability, scalability, observability, and messaging.
-        <br />
-        Spring Cloud AWS Core Team, SQS lead maintainer.
+      <hr class="my-3 border-border dark:opacity-30" />
+      <p class="mt-3">
+        💻 Software Engineer, 10+ years of experience.
       </p>
-      <p class="mt-4">
-        <a
-          href="/posts/sqs-architecture-overview/"
-          class="underline decoration-dashed underline-offset-4 hover:text-accent"
-        >Start here: SQS architecture overview</a>
+      <p class="mt-3">
+        🍃 <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline hover:decoration-dotted hover:underline-offset-4">Spring Cloud AWS</a> Core Team, SQS lead maintainer.
       </p>
-      {
-        // only display if at least one social link is enabled
-        SOCIALS.length > 0 && (
-          <div class="mt-4 flex max-sm:flex-col sm:items-center">
-            <div class="me-2 mb-1 whitespace-nowrap sm:mb-0">Social Links:</div>
-            <Socials />
-          </div>
-        )
-      }
+      <hr class="my-3 border-border dark:opacity-30" />
+      <h2 class="mt-3 text-lg font-semibold">What I write about:</h2>
+      <ul class="mt-2 list-disc list-inside">
+        <li>Architecture, reliability, scalability, observability, and messaging</li>
+        <li>Shipping small, reversible, production-safe changes</li>
+      </ul>
+      <hr class="my-3 border-border dark:opacity-30" />
+      <h2 class="mt-3 text-lg font-semibold">Start here:</h2>
+      <a
+        href="/posts/sqs-architecture-overview/"
+        class="mt-2 inline-block rounded border border-accent px-4 py-2 text-accent hover:bg-accent hover:text-background transition-colors"
+      >Spring Cloud AWS SQS: Architecture Overview</a>
     </section>
 
     {
@@ -78,7 +76,7 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
           id="featured"
           class:list={[
             "pt-12 pb-6",
-            { "border-b border-border": recentPosts.length > 0 },
+            { "border-b border-border dark:border-opacity-30": recentPosts.length > 0 },
           ]}
         >
           <h2 class="text-2xl font-semibold tracking-wide">Featured</h2>
