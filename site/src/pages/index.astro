@@ -51,14 +51,15 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
       </div>
 
       <p class="mt-4">
-        Technical deep dives into software engineering, Spring Boot, AWS, and
-        distributed systems. Every post is backed by runnable
-        <LinkButton
+        Notes on distributed systems: reliability, scalability, observability, and messaging.
+        <br />
+        Spring Cloud AWS Core Team, SQS lead maintainer.
+      </p>
+      <p class="mt-4">
+        <a
+          href="/posts/sqs-architecture-overview/"
           class="underline decoration-dashed underline-offset-4 hover:text-accent"
-          href="/examples/"
-        >
-          examples
-        </LinkButton> you can clone and try yourself.
+        >Start here: SQS architecture overview</a>
       </p>
       {
         // only display if at least one social link is enabled

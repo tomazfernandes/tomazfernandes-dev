@@ -61,11 +61,19 @@ export default defineConfig({
     preserveScriptOrder: true,
     fonts: [
       {
-        name: "Google Sans Code",
-        cssVariable: "--font-google-sans-code",
+        name: "Inter",
+        cssVariable: "--font-inter",
+        provider: fontProviders.google(),
+        fallbacks: ["sans-serif"],
+        weights: [400, 500, 600, 700],
+        styles: ["normal", "italic"],
+      },
+      {
+        name: "JetBrains Mono",
+        cssVariable: "--font-jetbrains-mono",
         provider: fontProviders.google(),
         fallbacks: ["monospace"],
-        weights: [300, 400, 500, 600, 700],
+        weights: [400, 500, 700],
         styles: ["normal", "italic"],
       },
     ],
