@@ -1,0 +1,124 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import LinkButton from "@/components/LinkButton.astro";
+import Card from "@/components/Card.astro";
+import getSortedPosts from "@/utils/getSortedPosts";
+import IconRss from "@/assets/icons/IconRss.svg";
+import IconArrowRight from "@/assets/icons/IconArrowRight.svg";
+import { SITE } from "@/config";
+
+const posts = await getCollection("blog");
+
+const sortedPosts = getSortedPosts(posts);
+const featuredPosts = sortedPosts.filter(({ data }) => data.featured);
+const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
+---
+
+<Layout>
+  <Header />
+  <main id="main-content" data-layout="index" class="app-layout">
+    <section id="hero" class:list={["pt-8 pb-6", "border-b border-border dark:border-opacity-30"]}>
+      <div class="flex items-center gap-4 sm:gap-6">
+        <img
+          src="/images/profile.jpeg"
+          alt="Tomaz Fernandes"
+          class="size-20 rounded-full object-cover sm:size-24"
+        />
+        <div>
+          <h1 class="text-3xl font-bold sm:text-4xl">
+            Pragmatic Distributed Systems
+          </h1>
+          <p class="inline-flex items-center gap-2 text-lg opacity-75">by Tomaz Fernandes
+            <a
+              target="_blank"
+              href="/rss.xml"
+              aria-label="rss feed"
+              title="RSS Feed"
+            >
+              <IconRss
+                width={16}
+                height={16}
+                class="stroke-accent stroke-3 rtl:-rotate-90"
+              />
+              <span class="sr-only">RSS Feed</span>
+            </a>
+          </p>
+        </div>
+      </div>
+
+      <hr class="my-3 border-border dark:opacity-30" />
+      <p class="mt-3">
+        💻 Software Engineer, 10+ years of experience
+      </p>
+      <p class="mt-3">
+        🍃 <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline hover:decoration-dotted hover:underline-offset-4">Spring Cloud AWS</a> SQS lead maintainer
+      </p>
+      <hr class="my-3 border-border dark:opacity-30" />
+      <h2 class="mt-3 text-lg font-semibold">What I write about:</h2>
+      <ul class="mt-2 list-disc list-inside">
+        <li>Architecture, reliability, scalability, observability, and messaging</li>
+        <li>Shipping small, reversible, production-safe changes</li>
+      </ul>
+      <hr class="my-3 border-border dark:opacity-30" />
+      <h2 class="mt-3 text-lg font-semibold">Start here:</h2>
+      <a
+        href="/posts/sqs-architecture-overview/"
+        class="mt-2 inline-block rounded border border-accent px-4 py-2 text-accent hover:bg-accent hover:text-background transition-colors"
+      >Spring Cloud AWS SQS: Architecture Overview</a>
+    </section>
+
+    {
+      featuredPosts.length > 0 && (
+        <section
+          id="featured"
+          class:list={[
+            "pt-12 pb-6",
+            { "border-b border-border dark:border-opacity-30": recentPosts.length > 0 },
+          ]}
+        >
+          <h2 class="text-2xl font-semibold tracking-wide">Featured</h2>
+          <ul>
+            {featuredPosts.map(data => (
+              <Card variant="h3" {...data} />
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      recentPosts.length > 0 && (
+        <section id="recent-posts" class="pt-12 pb-6">
+          <h2 class="text-2xl font-semibold tracking-wide">Recent Posts</h2>
+          <ul>
+            {recentPosts.map(
+              (data, index) =>
+                index < SITE.postPerIndex && <Card variant="h3" {...data} />
+            )}
+          </ul>
+        </section>
+      )
+    }
+
+    <div class="my-8 text-center">
+      <LinkButton href="/posts/">
+        All Posts
+        <IconArrowRight class="inline-block rtl:-rotate-180" />
+      </LinkButton>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  document.addEventListener("astro:page-load", () => {
+    const indexLayout = (document.querySelector("#main-content") as HTMLElement)
+      ?.dataset?.layout;
+    if (indexLayout) {
+      sessionStorage.setItem("backUrl", "/");
+    }
+  });
+</script>

@@ -1,0 +1,26 @@
+---
+import { getCollection } from "astro:content";
+import Main from "@/layouts/Main.astro";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import ExampleCard from "@/components/ExampleCard.astro";
+import getExamples from "@/utils/getExamples";
+import { SITE } from "@/config";
+
+const examples = await getCollection("examples");
+const sortedExamples = getExamples(examples);
+---
+
+<Layout title={`Examples | ${SITE.title}`}>
+  <Header />
+  <Main
+    pageTitle="Examples"
+    pageDesc="Runnable code examples to accompany blog posts."
+  >
+    <ul>
+      {sortedExamples.map(example => <ExampleCard {example} />)}
+    </ul>
+  </Main>
+  <Footer />
+</Layout>
