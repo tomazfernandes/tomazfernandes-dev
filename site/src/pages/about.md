@@ -9,7 +9,7 @@ title: "About"
 
 I'm a software engineer with 10+ years of experience, based in Rio de Janeiro, Brazil.
 
-I write about pragmatic distributed systems engineering: reliability, observability, messaging, and shipping small, reversible, production-safe changes. This site is where I publish deep dives, mental models, and practical notes.
+I write about distributed systems: reliability, observability, messaging, and shipping small, reversible, production-safe changes. This site is where I publish technical notes, mental models, and occasional deep dives.
 
 ## About my OSS work
 
