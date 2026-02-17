@@ -4,6 +4,7 @@ slug: "sqs-architecture-overview"
 description: "A high-level walkthrough of the Spring Cloud AWS SQS listener architecture: startup assembly, container runtime, and the core components of the processing pipeline."
 pubDatetime: 2025-01-16T00:00:00Z
 tags: ["sqs", "aws", "spring-cloud-aws", "distributed-systems", "messaging"]
+examples: ["sqs-architecture-overview"]
 draft: false
 ---
 
