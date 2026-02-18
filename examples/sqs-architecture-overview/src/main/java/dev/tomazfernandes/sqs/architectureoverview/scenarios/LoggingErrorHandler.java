@@ -19,7 +19,7 @@ public class LoggingErrorHandler implements ErrorHandler<Object> {
 
     @Override
     public void handle(Message<Object> message, Throwable t) {
-        log.info("Error handler: '{}' — message will return to queue for redelivery.", t.getMessage());
+        log.info("[Scenario: Error Handler] '{}' — message will return to queue for redelivery.", t.getMessage());
         if (t instanceof RuntimeException re) throw re;
         throw new RuntimeException(t);
     }

@@ -14,6 +14,8 @@ We'll express the "receive, handle, acknowledge" loop as a staged runtime, makin
 
 It's a companion to the [architectural overview](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md) in the Spring Cloud AWS repository, which includes diagrams and a component reference.
 
+If you want to see the staged runtime in motion, run the companion playground: **[SQS Architecture Overview example](/examples/sqs-architecture-overview/)**.
+
 ## What production consumers need to account for
 
 At a glance, consuming messages looks simple: receive, handle, acknowledge. In production, most of the complexity comes from the constraints around that loop.
@@ -68,6 +70,8 @@ flowchart LR
   E --> F["Registry<br/>(lifecycle start/stop)"]
 ```
 
+> Try it: `make run-assembly` (prints the container registry view at startup)
+
 ## How Spring Cloud AWS SQS maps onto this model
 
 Spring Cloud AWS SQS follows this assembly pattern with its own components, documented in the [assembly phase](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md#assembly-phase) section of the architecture overview. Here’s how each assembly role maps to the module:
@@ -119,9 +123,15 @@ The components in this flow map the earlier constraints onto concrete mechanisms
 
 - **Execution envelope:** user code is invoked via [MessageListener](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/MessageListener.java), with [MessageInterceptor](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/interceptor/MessageInterceptor.java) providing before/after hooks around processing.
 
+  > Try it: `make run-interceptor` (logs before/after hooks wrapping each message)
+
 - **Failure policy:** [ErrorHandler](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/errorhandler/ErrorHandler.java) defines how processing failures are handled and whether they lead to retry/redelivery.
 
+  > Try it: `make run-error-handler` (simulates failures and redelivery after visibility timeout)
+
 - **Acknowledgement flow:** [AcknowledgementHandler](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/handler/AcknowledgementHandler.java) determines when a message should be acknowledged and triggers the delete through [AcknowledgementProcessor](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementProcessor.java), which reports outcomes via [AcknowledgementResultCallback](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementResultCallback.java).
+
+  > Try it: `make run-ack-callback` (logs when SQS confirms message deletion)
 
 These stages also interact with cross-cutting concerns:
 
@@ -145,3 +155,5 @@ Spring Cloud AWS SQS makes this model concrete and splits the architecture into 
 If you want to dive deeper into the concrete component boundaries, the companion [architectural overview](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md) includes diagrams and a component reference.
 
 For customization, the [reference docs](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html) cover the main extension points and configuration surface (container options, acknowledgement and error handling, interceptors, observability).
+
+To run the staged pipeline locally, start with the playground example: **[sqs-architecture-overview](/examples/sqs-architecture-overview/)**.

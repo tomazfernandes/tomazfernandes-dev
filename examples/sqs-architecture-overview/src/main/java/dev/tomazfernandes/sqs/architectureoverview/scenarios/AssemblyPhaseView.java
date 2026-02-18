@@ -14,7 +14,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Startup assembly scenario: proves that {@code @SqsListener} annotations were assembled into
+ * Assembly phase scenario: proves that {@code @SqsListener} annotations were assembled into
  * live {@code SqsMessageListenerContainer} instances by the container factory and registry.
  *
  * <p>Logs container id, queue names, running state, and key container options
@@ -22,31 +22,31 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(1)
-@ConditionalOnProperty(name = "sqs-architecture-overview.scenarios.registry-view", havingValue = "true")
+@ConditionalOnProperty(name = "sqs-architecture-overview.scenarios.assembly-view", havingValue = "true")
 @SuppressWarnings("rawtypes")
-public class RegistryView implements ApplicationRunner {
-    private static final Logger log = LoggerFactory.getLogger(RegistryView.class);
+public class AssemblyPhaseView implements ApplicationRunner {
+    private static final Logger log = LoggerFactory.getLogger(AssemblyPhaseView.class);
 
     private final MessageListenerContainerRegistry registry;
 
-    public RegistryView(MessageListenerContainerRegistry registry) {
+    public AssemblyPhaseView(MessageListenerContainerRegistry registry) {
         this.registry = registry;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("=== Container Registry View ===");
+        log.info("[Scenario: Assembly Phase View] === Assembly Phase View ===");
         asSqsContainers(registry.getListenerContainers()).forEach(this::logContainerInfo);
-        log.info("=== End Container Registry View ===");
+        log.info("[Scenario: Assembly Phase View] === End Assembly Phase View ===");
     }
 
     private void logContainerInfo(SqsMessageListenerContainer<?> container) {
-        log.info("Container: id={}, queues={}, running={}",
+        log.info("[Scenario: Assembly Phase View] Container: id={}, queues={}, running={}",
                 container.getId(),
                 container.getQueueNames(),
                 container.isRunning());
         var options = container.getContainerOptions();
-        log.info("  maxConcurrentMessages={}, maxMessagesPerPoll={}, acknowledgementMode={}",
+        log.info("[Scenario: Assembly Phase View]   maxConcurrentMessages={}, maxMessagesPerPoll={}, acknowledgementMode={}",
                 options.getMaxConcurrentMessages(),
                 options.getMaxMessagesPerPoll(),
                 options.getAcknowledgementMode());

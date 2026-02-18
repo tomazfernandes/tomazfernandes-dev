@@ -16,16 +16,20 @@ public class OrderProducer implements ApplicationRunner {
 
     private final SqsTemplate sqsTemplate;
     private final String queueName;
+    private final boolean errorHandlerEnabled;
 
     public OrderProducer(SqsTemplate sqsTemplate,
-                         @Value("${sqs-architecture-overview.orders-queue-name}") String queueName) {
+                         @Value("${sqs-architecture-overview.orders-queue-name}") String queueName,
+                         @Value("${sqs-architecture-overview.scenarios.error-handler.enabled:false}") boolean errorHandlerEnabled) {
         this.sqsTemplate = sqsTemplate;
         this.queueName = queueName;
+        this.errorHandlerEnabled = errorHandlerEnabled;
     }
 
     @Override
     public void run(ApplicationArguments args) {
-        for (int i = 1; i <= 3; i++) {
+        int count = errorHandlerEnabled ? 3 : 1;
+        for (int i = 1; i <= count; i++) {
             var event = new OrderEvent("order-" + i, "Order #" + i);
             sqsTemplate.send(queueName, event);
             log.info("Sent: {}", event);

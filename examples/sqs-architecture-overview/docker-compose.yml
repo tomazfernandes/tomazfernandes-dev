@@ -8,17 +8,18 @@ services:
     volumes:
       - ./localstack:/etc/localstack/init/ready.d
     healthcheck:
-      test: ["CMD", "awslocal", "sqs", "list-queues"]
-      interval: 5s
-      retries: 10
+      test: ["CMD", "awslocal", "sqs", "get-queue-url", "--queue-name", "orders-queue"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
 
   app:
     build: .
     environment:
       - SPRING_CLOUD_AWS_ENDPOINT=http://localstack:4566
       - SPRING_CLOUD_AWS_REGION_STATIC=us-east-1
-      - SPRING_CLOUD_AWS_CREDENTIALS_ACCESS-KEY=test
-      - SPRING_CLOUD_AWS_CREDENTIALS_SECRET-KEY=test
+      - SPRING_CLOUD_AWS_CREDENTIALS_ACCESS_KEY=test
+      - SPRING_CLOUD_AWS_CREDENTIALS_SECRET_KEY=test
     depends_on:
       localstack:
         condition: service_healthy

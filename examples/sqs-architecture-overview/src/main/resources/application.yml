@@ -4,23 +4,22 @@ sqs-architecture-overview:
   # https://tomazfernandes.dev/posts/sqs-architecture-overview/
   # Toggle them on/off to isolate individual pipeline stages.
   scenarios:
-    # Startup assembly: shows @SqsListener annotations became live containers.
-    # Look for === Container Registry View === in the logs at startup
-    # Or add a breakpoint in the RegistryView.run() method.
-    registry-view: true
+    # Assembly phase: shows @SqsListener annotations became live containers.
+    # Look for === Assembly Phase View === in the logs at startup.
+    assembly-view: false
 
     # Execution envelope: before/after hooks that wrap user code.
     interceptor:
-      logging: true
+      logging: false
 
     # Failure policy: what happens on exceptions and how redelivery works.
     error-handler:
-      enabled: true
+      enabled: false
       fail-n-times: 2
-      fail-order-id: order-2
+      fail-order-id: order-1
 
     # Acknowledgement flow: "ack is delete" — observe when SQS confirms message removal.
-    ack-callback: true
+    ack-callback: false
 
 
 spring:
