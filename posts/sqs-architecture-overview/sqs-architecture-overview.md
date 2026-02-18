@@ -14,7 +14,7 @@ We'll express the "receive, handle, acknowledge" loop as a staged runtime, makin
 
 It's a companion to the [architectural overview](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md) in the Spring Cloud AWS repository, which includes diagrams and a component reference.
 
-If you want to see the staged runtime in motion, run the companion playground: **[SQS Architecture Overview example](/examples/sqs-architecture-overview/)**.
+If you want to see the staged runtime in motion, clone the companion playground project: **[SQS Architecture Overview example](/examples/sqs-architecture-overview/)**.
 
 ## What production consumers need to account for
 

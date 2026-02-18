@@ -4,8 +4,8 @@ slug: "hello-world"
 description: "A walkthrough of how this blog is built — static site generation, content collections, Mermaid diagrams, and deployment to Cloudflare Pages."
 pubDatetime: 2025-01-15T00:00:00Z
 tags: ["astro", "cloudflare", "blog"]
-draft: false
-examples: ["observability-sqs"]
+draft: true
+examples: []
 ---
 
 ## Why Astro?
