@@ -109,6 +109,7 @@ const nextPost =
     >
       {title}
     </h1>
+    <p class="mt-2 text-base italic opacity-80">by <a href="/about/" class="text-accent decoration-dashed underline-offset-4 hover:underline">{author}</a></p>
     <div class="my-2 flex items-center gap-2">
       <Datetime {pubDatetime} {modDatetime} {timezone} size="lg" />
       <span aria-hidden="true" class="opacity-50">|</span>
