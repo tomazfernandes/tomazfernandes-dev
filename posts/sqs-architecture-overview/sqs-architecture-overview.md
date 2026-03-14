@@ -8,11 +8,25 @@ examples: ["sqs-architecture-overview"]
 draft: false
 ---
 
-This post walks through the Spring Cloud AWS SQS architecture introduced in the Spring Cloud AWS 3.0 redesign, [announced as GA in 2023](https://spring.io/blog/2023/05/02/announcing-spring-cloud-aws-3-0-0). It connects the design first to broker-agnostic constraints production messaging consumers commonly have to handle, and then to SQS-specific constraints.
+This post walks through the Spring Cloud AWS SQS architecture introduced in the Spring Cloud AWS 3.0 redesign, [announced as GA in 2023](https://spring.io/blog/2023/05/02/announcing-spring-cloud-aws-3-0-0). It first outlines broker-agnostic concerns that production messaging consumers commonly have to handle, and then SQS-specific constraints.
 
-The startup assembly section describes a pattern Spring projects use to turn declarative, annotation-based configuration into listener containers, and shows how Spring Cloud AWS SQS implements that pattern.
+With that baseline model established, the startup assembly section describes a common pattern Spring projects use to turn declarative, annotation-based configuration into listener containers, and maps the Spring Cloud AWS SQS implementation to that pattern.
 
-In the runtime execution section, the “receive, handle, acknowledge” loop is expressed as a staged runtime pipeline. It then concludes by mapping those stages back to the earlier constraints.
+The runtime execution section then breaks the "receive, handle, acknowledge" loop into a staged runtime pipeline built on AWS SDK v2 async APIs, linking those stages back to the earlier concerns.
+
+<details>
+<summary>Open table of contents</summary>
+
+- [Reference and runnable examples](#reference-and-runnable-examples)
+- [Broker-agnostic constraints for production consumers](#broker-agnostic-constraints-for-production-consumers)
+- [How SQS broker semantics shape consumer constraints](#how-sqs-broker-semantics-shape-consumer-constraints)
+- [Spring messaging integrations and a two-phase model](#spring-messaging-integrations-and-a-two-phase-model)
+- [Assembly phase: declarative wiring and lifecycle](#assembly-phase-declarative-wiring-and-lifecycle)
+- [How Spring Cloud AWS SQS maps onto this model](#how-spring-cloud-aws-sqs-maps-onto-this-model)
+- [Container execution phase](#container-execution-phase)
+- [Conclusion](#conclusion)
+
+</details>
 
 ## Reference and runnable examples
 
@@ -24,12 +38,12 @@ To run the scenarios locally, clone the example project linked from the [example
 
 At a glance, consuming messages looks simple: receive, handle, acknowledge. In production, most of the complexity comes from the constraints around that loop.
 
-Such constraints can be grouped into three ownership layers:
+These can be grouped into three ownership layers:
 - **Broker/queue** owns delivery semantics such as redelivery behavior, dead-letter policies, and ordering guarantees.
 - **Integration runtime** owns orchestration: receiving, dispatch, backpressure, acknowledgement calls, and instrumentation hooks.
-- **Application** owns idempotency, side-effect safety. Many brokers provide at-least-once delivery, so duplicates must be assumed.
-
-This post focuses on the constraints the **integration runtime** owns, using Spring Cloud AWS SQS as an example of how these constraints map onto a staged processing pipeline with explicit, composable components:
+- **Application** owns idempotency and side-effect safety. For brokers that provide at-least-once delivery, duplicates must be assumed.
+- 
+This post focuses on the responsibilities the **integration runtime** owns:
 
 - **Ingress control:** how receiving is controlled and when it is paused.
 - **Dispatch semantics:** how messages are dispatched under different modes (single, batch, ordered, grouped).
@@ -47,17 +61,13 @@ At the broker layer, SQS’s semantics translate into concrete constraints for c
 
 - **Redelivery and dead-lettering:** Retries are a consequence of visibility timeout and redelivery. Dead-letter behavior is configured through queue redrive policies.
 
-- **Acknowledgement is deletion:** In SQS, acknowledging a message means deleting it. If processing succeeds but delete fails, the message may be delivered again.
+- **Acknowledgement:** In SQS, acknowledging a message means deleting it. If processing succeeds but delete fails, the message may be delivered again, or routed to a DLQ.
 
-- **Observability surface:** SQS exposes queue-level metrics such as depth and message age. Consumer-side signals (processing latency, delete outcomes, redelivery rates) need to be instrumented outside the queue.
+- **Observability surface:** SQS exposes queue-level metrics such as depth and message age. Consumer-side signals need to be instrumented at the integration and application layer.
 
 ## Spring messaging integrations and a two-phase model
 
 Spring-based messaging integrations have two distinct parts: an **assembly phase** and a **container runtime execution phase**.
-
-At startup, Spring assembles listener containers from declarative configuration (annotations and shared infrastructure).
-
-After the application starts, those containers receive messages from the broker, dispatch work, wrap user code with extension points, and handle acknowledgements.
 
 ## Assembly phase: declarative wiring and lifecycle
 
@@ -80,11 +90,9 @@ flowchart LR
   E --> F["Registry<br/>(lifecycle start/stop)"]
   ```
 
-> Try it: `make run-assembly` (prints the container registry view at startup)
-
 ## How Spring Cloud AWS SQS maps onto this model
 
-Spring Cloud AWS SQS follows this assembly pattern with its own components, documented in the [assembly phase](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md#assembly-phase) section of the architecture overview. Here’s how each assembly role maps to the module:
+Spring Cloud AWS SQS follows this assembly pattern with its own components, documented in the [assembly phase](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md#assembly-phase) section of the architecture overview. Here's how each assembly role maps to the module:
 
 | Spring concept      | SQS module implementation |
 |---|---|
@@ -95,6 +103,8 @@ Spring Cloud AWS SQS follows this assembly pattern with its own components, docu
 | Listener container  | [SqsMessageListenerContainer](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/SqsMessageListenerContainer.java) |
 | Container options   | [SqsContainerOptions](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/SqsContainerOptions.java) |
 | Registry            | [DefaultListenerContainerRegistry](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/DefaultListenerContainerRegistry.java) |
+
+> Try it: `make run-assembly` (prints the container registry view at startup)
 
 ## Container execution phase
 
@@ -145,17 +155,19 @@ The components in this flow map the earlier constraints onto concrete mechanisms
 
 These stages also interact with cross-cutting concerns:
 
-- **Redelivery / visibility:** by default, messages are acknowledged on successful processing and left unacknowledged on exceptions, which means they may be redelivered after the visibility timeout expires. For sequential processing within FIFO message groups, the sink layer can be configured with a visibility-extending adapter (for example, [MessageVisibilityExtendingSinkAdapter](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/adapter/MessageVisibilityExtendingSinkAdapter.java)) that extends visibility as part of the sequential dispatch flow.
+- **Redelivery / visibility:** by default, messages are acknowledged on successful processing and left unacknowledged on exceptions, which means they may be redelivered after the visibility timeout expires.
 
-- **Observability:** the module provides [Micrometer instrumentation](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#observability-support) out of the box for both template and listener operations, covering metrics and tracing with customizable conventions.
+- **Observability:** the module provides [Micrometer instrumentation](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#observability-support) out of the box for both listener and template operations, covering metrics and tracing with customizable conventions.
 
 - **Duplicates / idempotency:** the runtime assumes at-least-once delivery; idempotency is handled at the application boundary.
 
-The runtime is assembled from small interfaces at container start, keeping the core pipeline stable while supporting multiple processing modes. Customization is primarily exposed through container configuration and extension points such as [SqsContainerOptions](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/SqsContainerOptions.java) and [ContainerComponentFactory](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/ContainerComponentFactory.java).
+The runtime is assembled by the [ContainerComponentFactory](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/ContainerComponentFactory.java) when the container starts, enabling multiple processing modes by swapping components while keeping the pipeline unchanged.
+
+Customization is primarily exposed through container configuration and [SqsContainerOptions](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/SqsContainerOptions.java).
 
 ## Conclusion
 
-This post outlined common messaging constraints by turning the “receive, handle, acknowledge” loop into an explicit **staged runtime**, where orchestration is expressed as composable stages with clear responsibilities.
+This post mapped common messaging constraints by turning the “receive, handle, acknowledge” loop into an explicit **staged runtime**, where orchestration is expressed as composable stages with clear responsibilities.
 
 Spring Cloud AWS SQS makes this model concrete and splits the architecture into two phases:
 
@@ -164,4 +176,4 @@ Spring Cloud AWS SQS makes this model concrete and splits the architecture into 
 
 See the [architectural overview](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md) in the Spring Cloud AWS repository to dive deeper into concrete component boundaries. It includes diagrams and a component reference.
 
-To run the scenarios locally, check out the playground project linked from the examples page and experiment with new listeners, different configurations, and custom components. For the full configuration surface and extension points, see the [reference docs](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#sqs-integration).
+To run the scenarios locally, check out the playground project linked from the examples page and experiment with adding listeners, trying different configurations, and configuring custom components. For the full configuration surface and extension points, see the [reference docs](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#sqs-integration).
