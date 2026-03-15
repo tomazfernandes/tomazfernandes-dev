@@ -21,6 +21,12 @@ Thumbs.db
 *.swp
 *.swo
 
+# Tools
+.claude
+
 # Logs
 *.log
 npm-debug.log*
+
+# drafts
+drafts/
