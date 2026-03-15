@@ -1,7 +1,7 @@
 ---
-title: "What Happens Between @SqsListener and Your Method"
+title: "What Happens Between @SqsListener and Your Method in Spring Cloud AWS SQS"
 slug: from-sqslistener-to-your-method
-description: "A walkthrough of the full SQS listener lifecycle in Spring Cloud AWS, from annotation detection at startup to the composable async pipeline that polls, processes, and acknowledges every message."
+description: "A walkthrough of the full SQS listener lifecycle in Spring Cloud AWS SQS, from annotation detection at startup to the composable async pipeline that polls, processes, and acknowledges every message."
 tags:
   - spring-cloud-aws
   - sqs
@@ -9,135 +9,228 @@ tags:
   - spring
   - aws
   - messaging
-draft: true
+pubDatetime: 2026-03-14T00:00:00Z
+draft: false
 ---
 
-You write a method, add [`@SqsListener`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/annotation/SqsListener.java), and messages start arriving. From your code's perspective, the framework just calls your method with a deserialized payload. But between that annotation and your method, there's a full async pipeline: polling, dispatch, error recovery, acknowledgement, all running on infrastructure you never see.
+You write a method, add `@SqsListener`, and messages start arriving. It is easy to see that as a simple annotation-to-method shortcut. In practice, **Spring Cloud AWS SQS** assembles a listener container at startup and runs an async pipeline between the queue and your code at runtime.
 
-Understanding what's actually running matters when something goes wrong, when you need to extend the pipeline, or when you want to tune its behavior. So let's open the hood.
+That pipeline determines how messages are polled, dispatched, processed, and acknowledged. It shapes throughput, failure handling, and whether a listener invocation actually results in the message being deleted.
+
+This post gives you a practical model for that system through two questions: what gets decided at startup, and what happens when a message is flowing at runtime.
+
+For a broader architectural reference with diagrams, see the [architectural overview](...).
+
+If you want to follow along, the [example project](#seeing-it-in-action) at the end of the post includes runnable scenarios for assembly, interception, error handling, and acknowledgement.
 
 ## Two phases: assembly and execution
 
-The module splits its work into two phases.
+The first distinction that makes the system easier to reason about is that some behavior is decided once at startup, and some only appears when messages are actually flowing.
 
-The **assembly phase** runs at startup. Spring detects `@SqsListener` annotations, creates listener endpoints, builds containers from a factory, and registers them in a lifecycle-managed registry. This is wiring: it turns annotations into live runtime objects.
+These map to the **assembly** and **execution** phases. The framework first assembles listener behavior at startup, then executes message handling at runtime.
 
-The **execution phase** begins when those containers start. Each one runs an async pipeline that polls SQS, dispatches messages through a processing chain, and acknowledges them by deleting from the queue.
+Suppose you write this listener method:
 
-These phases are cleanly separated. The assembly machinery doesn't touch message processing, and the runtime pipeline doesn't care how it was assembled. Most of the interesting behavior lives in the execution phase.
+```java
+@SqsListener("orders-queue")
+public void handle(OrderCreated event) { // ... }
+```
 
-## Assembly: from annotation to container
+At startup, the framework turns the annotated method into the container and components that define how it will execute. This is the **assembly phase**.
 
-The assembly flow follows a short trail:
+The **execution phase** begins when the resulting containers start. Each container runs an async pipeline that polls SQS, dispatches messages for processing, and determines whether the result should be acknowledged.
 
-1. [`SqsListenerAnnotationBeanPostProcessor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/annotation/SqsListenerAnnotationBeanPostProcessor.java) detects `@SqsListener` annotations during bean post-processing
-2. Each annotation becomes an `Endpoint` describing the listener: queues, method, configuration
-3. The `EndpointRegistrar` delegates to `SqsMessageListenerContainerFactory` to create a container for each endpoint
-4. Containers are registered in the `MessageListenerContainerRegistry`, which manages their lifecycle
+The distinction is simple: startup assembles the runtime model, and runtime moves messages through it. That distinction matters because it frames the key question: is a given behavior determined at **assembly time**, or does it emerge as messages flow through the **runtime pipeline**?
 
-If you've used Spring for Apache Kafka, this structure is familiar. What differs is the execution model underneath.
+In Spring Cloud AWS SQS, that question is especially useful because most behavioral variation is defined by the components assembled at startup, while the runtime flow itself follows a fixed sequence of stages through those components.
 
-By the time your application is ready, every `@SqsListener` has become a live container with a known identity, queue bindings, and configuration. The [example project](https://github.com/tomazfernandes/tomazfernandes-dev/tree/main/examples/sqs-architecture-overview) makes this visible: `make run-assembly` logs each container's ID, queue names, and settings like `maxConcurrentMessages` at startup.
+## Assembly: how listener behavior is built
 
-## The async execution model
+Assembly is the startup process that turns an annotated method into a configured container with a known identity, queue bindings, and runtime configuration.
 
-SQS is I/O-bound. Every poll is a network call. Every acknowledgement is a batch-delete call. A synchronous model would tie up threads waiting on responses, making concurrency expensive and throughput limited by pool size.
+In simple terms, Spring detects your annotated method, turns it into a listener definition, creates a container for it, and registers that container so it can be started and managed as part of the application lifecycle. If you have used other Spring messaging projects such as **Spring for Apache Kafka**, this overall structure will feel familiar. What differs is the execution model underneath it.
 
-The pipeline is built on [`SqsAsyncClient`](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/sqs/SqsAsyncClient.html), where `receiveMessage()` and `deleteMessageBatch()` return `CompletableFuture`. Concurrency becomes a function of how many messages are allowed in-flight, not how many threads are available.
+Here is how each step maps to a component:
 
-This changes how you think about tuning. When you set `maxConcurrentMessages`, you're not sizing a thread pool. You're setting a permit limit that controls how many messages the pipeline will hold at once, which in turn controls how aggressively the source polls SQS.
+1. [`SqsListenerAnnotationBeanPostProcessor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/annotation/SqsListenerAnnotationBeanPostProcessor.java) detects [`@SqsListener`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/annotation/SqsListener.java) annotations during bean post-processing
+2. Each annotation becomes an [`Endpoint`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/config/Endpoint.java) that describes the listener: queues, method, and configuration
+3. The [`EndpointRegistrar`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/config/EndpointRegistrar.java) delegates to [`MessageListenerContainerFactory`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/config/SqsMessageListenerContainerFactory.java) to create a container for each endpoint
+4. Containers are registered in the [`MessageListenerContainerRegistry`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/MessageListenerContainerRegistry.java), which manages their lifecycle
 
-## The composable pipeline
-
-When a container starts, it assembles its runtime components and begins polling. Each stage in the pipeline handles a single concern.
+At a high level, the assembly flow looks like this:
 
 ```mermaid
 flowchart LR
-    BP["BackPressureHandler"] -.->|"gates polling"| MS
-    MS["MessageSource\n(polls SQS)"] --> MK["MessageSink"]
-    MK --> P
-    subgraph P ["MessageProcessingPipeline"]
-        direction LR
-        I1["Interceptors\n(before)"] --> L["Listener"]
-        L --> EH["ErrorHandler"]
-        EH --> I2["Interceptors\n(after)"]
-        I2 --> AH["AcknowledgementHandler"]
-    end
-    P --> AP["AcknowledgementProcessor\n(deletes from SQS)"]
-    AP --> AC["ResultCallback"]
+    A["@SqsListener method"]
+    B["Detected by SqsListenerAnnotationBeanPostProcessor"]
+    C["Endpoint"]
+    D["EndpointRegistrar"]
+    E["MessageListenerContainerFactory"]
+    F["MessageListenerContainer"]
+    G["Registered in MessageListenerContainerRegistry"]
+
+    A --> B --> C --> D --> E --> F --> G
 ```
 
-### MessageSource: polling and backpressure
+By the time startup completes, each `@SqsListener` method has been turned into a container with a known identity, queue bindings, and a set of components that shape its behavior.
 
-The [`MessageSource`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/source/MessageSource.java) polls SQS and converts responses into Spring `Message` objects. Before each poll, it requests permits from the [`BackPressureHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/backpressure/BackPressureHandler.java). If the pipeline is already at capacity, the permit request blocks and polling pauses. Permits are released when fewer messages are returned than requested, or when a message finishes processing. This creates a self-regulating loop: the source only polls as fast as the pipeline can consume.
+This is one of the main advantages of container-based messaging frameworks: they turn annotation-level intent into explicit runtime objects that can be inspected, configured, and managed consistently.
 
-If a poll fails, a configurable back-off policy kicks in. The container doesn't crash.
+Once started, each container runs the async execution pipeline described below.
 
-### MessageSink: dispatch strategy
+## Runtime: how the container pipeline determines message outcomes
 
-The [`MessageSink`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/MessageSink.java) takes the polled batch and dispatches it into the processing pipeline. The framework selects the right sink based on your configuration: `FanOutMessageSink` for parallel processing on standard queues, `BatchMessageSink` for batch listeners, `OrderedMessageSink` for sequential processing, or `MessageGroupingSinkAdapter` for FIFO queues. You rarely interact with the sink directly, but it's the reason the same processing pipeline supports fan-out, batch, and ordered delivery without changes to the stages downstream.
+Once the container starts, the question changes. You're no longer asking how the container was built. You are asking what happens to each message after it leaves SQS and before it disappears from the queue.
 
-### MessageProcessingPipeline: the processing chain
+That runtime flow can be broken into four responsibilities.
 
-The [`MessageProcessingPipeline`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/pipeline/MessageProcessingPipeline.java) is where your message actually gets processed. It chains together stages that execute in a fixed order, each handling a distinct concern. These are the stages the reader is most likely to interact with.
+- **Ingress**: balance polling and backpressure as messages enter the container
+- **Dispatch**: route polled messages into processing according to the delivery strategy
+- **Processing**: run the message processing pipeline and produce a result
+- **Acknowledgement**: decide whether that result should delete the message from SQS
 
-**Interceptors (before processing)**
+At this level, the runtime flow looks like this:
 
-[`MessageInterceptor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/interceptor/MessageInterceptor.java) implementations run before your listener method. They receive the message and return it (potentially modified), forming a chain. Typical uses: adding correlation IDs to the MDC, starting metric timers, enriching headers.
+```mermaid
+flowchart LR
+    I["Ingress\nbalance polling and backpressure"] --> D["Dispatch\ndeliver messages to processing"] --> P["Processing\nrun message processing pipeline"] --> A["Acknowledgement\ndecide whether to delete"]
+```
 
-`MessageInterceptor` beans are auto-detected. Adding one is as simple as declaring a `@Component`.
+The concrete components behind these stages are assembled at startup inside the [`MessageListenerContainer`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/MessageListenerContainer.java) by the [`ContainerComponentFactory`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/ContainerComponentFactory.java), based on the configured [`ContainerOptions`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/ContainerOptions.java) and queue semantics.
 
-**Listener invocation**
+While the assembly phase resembles common patterns from Spring messaging projects, the Spring Cloud AWS SQS runtime pipeline is built around an asynchronous execution model powered by the AWS SDK’s `CompletableFuture`-based API.
 
-Your `@SqsListener` method runs here. If it completes normally, the message continues toward acknowledgement. If it throws, the exception propagates to the error handler.
+The following sections walk through each stage.
 
-**Error handling**
+### Ingress: polling under backpressure
 
-The [`ErrorHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/errorhandler/ErrorHandler.java) receives the original message and the exception. By default, the exception propagates, which means the message won't be acknowledged and SQS will redeliver it after the visibility timeout expires.
+At runtime, throughput is defined by the balance between polling behavior and how much work backpressure allows into the pipeline. Depending on configuration, multiple polls can stay in flight in parallel until the configured in-flight capacity is full.
 
-Custom error handlers let you control the failure policy: suppress the error so acknowledgement proceeds, route to a dead-letter queue, or apply conditional logic. Like interceptors, `ErrorHandler` beans are auto-detected.
+This is one of the main controls over resource usage. If ingress is too permissive, the application can consume too much memory or processing capacity and degrade performance. If it is too restrictive, messages can accumulate in the queue while the application still has spare capacity. In asynchronous pipelines, throughput is usually limited less by how fast work enters the system than by how safely the rest of the pipeline can absorb it.
 
-**Interceptors (after processing)**
+The ingress cycle looks like this at a high level:
 
-The same interceptor chain runs again with an `afterProcessing` callback that receives both the message and any exception. This is where you close the execution envelope: stop timers, log outcomes, clean up thread-local state.
+```mermaid
+flowchart LR
+    A["BackPressureHandler"]
+    B["MessageSource polls"]
+    C["Processing pipeline"]
+    D["Messages finish processing"]
+    E["Capacity released"]
 
-**Acknowledgement handling**
+    A --> B --> C --> D --> E --> A
+```
 
-The [`AcknowledgementHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/handler/AcknowledgementHandler.java) decides whether to acknowledge based on the configured `AcknowledgementMode`:
+At ingress, [`MessageSource`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/source/MessageSource.java) controls ingress into the pipeline and converts SQS messages into Spring `Message` instances. It keeps polling while the [`BackPressureHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/backpressure/BackPressureHandler.java) allows more work to enter the container.
 
-- `ON_SUCCESS` (default): acknowledge only if processing succeeded
-- `ALWAYS`: acknowledge regardless of outcome
-- `MANUAL`: skip automatic acknowledgement, letting the listener control it
+As each message finishes processing, capacity is released and the container can keep polling. Polling behavior is also configurable, including batch size and long polling settings that balance throughput and efficiency.
 
-### AcknowledgementProcessor: deletion from SQS
+By default backpressure is mainly driven by internal in-flight capacity, but the mechanism is extensible and can also reflect signals such as downstream queue pressure or service availability.
 
-The [`AcknowledgementProcessor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementProcessor.java) executes the actual SQS deletion. In SQS, acknowledging a message means deleting it from the queue. The processor batches delete requests and sends them asynchronously.
+### Dispatch: delivery strategy
 
-The handler decides *whether* to acknowledge. The processor handles *how*: batching, timing, retries. Separating these concerns lets you change the policy without touching the mechanics.
+Once messages enter the container, the next question is how they should be routed into processing. That is the role of the [`MessageSink`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/MessageSink.java).
 
-### AcknowledgementResultCallback: observability
+Dispatch varies because not every message should enter processing the same way. Standard queues can fan out work in parallel. Batch listeners may want one or more batches delivered as a single unit. FIFO queues need dispatch that preserves ordering, often with message-group awareness.
 
-The [`AcknowledgementResultCallback`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementResultCallback.java) fires after the delete call succeeds or fails. Use it to confirm message removal, emit metrics, or alert on failures. Unlike interceptors and error handlers, this callback is not auto-detected: you register it on the container factory.
+The framework selects the concrete sink based on those semantics:
+
+- [`FanOutMessageSink`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/FanOutMessageSink.java): parallel delivery for standard queues
+- [`BatchMessageSink`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/BatchMessageSink.java): batch delivery for batch listeners
+- [`OrderedMessageSink`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/OrderedMessageSink.java): sequential delivery when ordering must be preserved
+- [`MessageGroupingSinkAdapter`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/adapter/MessageGroupingSinkAdapter.java): FIFO-aware delivery based on message groups
+
+Most users never interact with the sink directly, but it is a key part of the runtime design. Dispatch can vary by queue and listener semantics while the rest of the processing model stays the same. 
+
+Sinks are composable, and behaviors can be layered, for example by combining an `OrderedMessageSink`, a [`MessageVisibilityExtendingSinkAdapter`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/sink/adapter/MessageVisibilityExtendingSinkAdapter.java), and a `MessageGroupingSinkAdapter`.
+
+### Processing: producing a result
+
+Once a message enters processing, the framework runs it through a chain that can intercept the message, invoke the listener method, handle errors, and decide whether the result should move into acknowledgement.
+
+That chain is built in stages:
+
+```mermaid
+flowchart LR
+    MI1["MessageInterceptor\nbefore"] --> ML["MessageListener"]
+    ML --> EH["ErrorHandler"]
+    EH --> MI2["MessageInterceptor\nafterProcessing"]
+    MI2 --> AH["AcknowledgementHandler"]
+```
+
+Here is how those stages map to the main runtime components:
+
+- [`MessageInterceptor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/interceptor/MessageInterceptor.java) can observe or transform the message before listener invocation
+- [`MessageListener`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/MessageListener.java) invokes the method behind your `@SqsListener`
+- [`ErrorHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/errorhandler/ErrorHandler.java) determines how listener failures are handled and whether they should still propagate
+- [`MessageInterceptor.afterProcessing(...)`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/interceptor/MessageInterceptor.java) observes the final result, including any exception
+- [`AcknowledgementHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/handler/AcknowledgementHandler.java) is the bridge to the next stage, deciding whether that result should move into acknowledgement
+
+These components are available in synchronous and asynchronous variants. Using the asynchronous variants enables an end-to-end non-blocking pipeline. The framework automatically adapts both types into the pipeline without requiring any user configuration.
+
+At this stage, processing has produced a result, determined whether it should move into acknowledgement, and released backpressure capacity.
+
+### Acknowledgement: turning processing into deletion
+
+A listener finishing successfully is not the same as a message being removed from the queue. Processing and deletion are separate concerns, and that gap is where operational surprises often appear.
+
+If acknowledgement falls behind, completed messages can accumulate waiting for deletion. That increases the chance of visibility timeouts expiring before the delete call happens, which can lead to redelivery, duplicate work, and degraded performance.
+
+At a high level, the acknowledgement path looks like this:
+
+```mermaid
+flowchart LR
+    AH["AcknowledgementHandler\n(decide whether to acknowledge)"] --> AP["AcknowledgementProcessor\n(coordinate acknowledgement strategy)"]
+    AP --> AE["AcknowledgementExecutor\n(perform delete call)"]
+    AE --> AC["AcknowledgementResultCallback\n(observe delete result)"]
+```
+
+At the end of the processing pipeline the [`AcknowledgementHandler`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/handler/AcknowledgementHandler.java) has decided whether the result should move into acknowledgement. If the result should not be acknowledged, the message does not enter the acknowledgement stage, and SQS makes it visible again after the visibility timeout expires.
+
+When a message does move into acknowledgement, the [`AcknowledgementProcessor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementProcessor.java) applies the acknowledgement strategy according to configuration and queue semantics:
+
+- For **standard queues**, acknowledgements are batched by default and executed in parallel based on configurable batch thresholds and acknowledgement schedule.
+- For **FIFO queues**, acknowledgements respect message-group ordering: they can run in ordered parallel batches across groups, or synchronously after each message when out-of-order reprocessing must be avoided.
+
+The actual delete call is performed by the [`AcknowledgementExecutor`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementExecutor.java). Its result can be observed through [`AcknowledgementResultCallback`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/listener/acknowledgement/AcknowledgementResultCallback.java), including partial acknowledgement failures reported as [`SqsAcknowledgementException`](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/src/main/java/io/awspring/cloud/sqs/SqsAcknowledgementException.java).
+
+
+This gives the container an acknowledgement model tailored to each queue type, balancing efficiency, ordering guarantees, observability, and extensibility for custom recovery strategies.
+
+At that point, the overall shape of the runtime model is visible: messages enter through controlled ingress, are dispatched according to queue semantics, move through a processing chain that produces an outcome, and only then pass into acknowledgement. The value of this breakdown is not just that it names internal components, but that it turns `@SqsListener` from a single abstraction into a sequence of responsibilities.
+
+## The async execution model
+
+At runtime, SQS interaction is mostly I/O-bound. Polling is a network call, and acknowledgement eventually becomes a delete request back to SQS. In a synchronous design, threads would spend much of their time waiting on those operations, so throughput would be tied more closely to thread count.
+
+Spring Cloud AWS SQS is built on [`SqsAsyncClient`](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/sqs/SqsAsyncClient.html), where operations such as `receiveMessage()` and `deleteMessageBatch()` return `CompletableFuture`. That shifts the container away from a thread-per-message design and toward an in-flight work model.
+
+As a result, maxConcurrentMessages is not just a concurrency knob. It is one of the main controls over how much work the container allows into the pipeline at once. That affects how many polls the container can keep in flight in parallel, and how much pressure is placed on downstream processing and acknowledgement.
+
+That same async model is what makes the ingress, processing, and acknowledgement stages composable without tying throughput directly to blocked threads.
 
 ## Seeing it in action
 
-The [example project](https://github.com/tomazfernandes/tomazfernandes-dev/tree/main/examples/sqs-architecture-overview) makes each pipeline stage observable through toggleable scenarios (Docker only, no local Java required):
+The [example project](https://github.com/tomazfernandes/tomazfernandes-dev/tree/main/examples/from-sqslistener-to-your-method) makes these stages concrete through a set of toggleable scenarios. It runs with Docker only, so you do not need a local Java setup.
 
-- `make run-assembly`: container metadata at startup
-- `make run-interceptor`: before/after hooks wrapping each message
-- `make run-error-handler`: failure handling and SQS redelivery
-- `make run-ack-callback`: delete confirmation from SQS
-- `make run-all`: all scenarios at once
+- `make run-assembly`: logs container metadata at startup
+- `make run-interceptor`: shows before/after interceptor hooks around each message
+- `make run-error-handler`: shows failure handling and SQS redelivery
+- `make run-ack-callback`: shows acknowledgement results after delete requests
+- `make run-all`: runs all scenarios together
 
 ## Takeaways
 
-`@SqsListener` is the entry point, but the system behind it is a two-phase architecture with a composable async pipeline. Each stage (polling, dispatch, interception, listener invocation, error handling, acknowledgement) is a replaceable component behind a well-defined interface.
+`@SqsListener` looks simple on the surface, but behind it Spring Cloud AWS SQS assembles a container at startup and runs each message through an async runtime pipeline.
 
-Knowing the pipeline gives you practical leverage:
+Once that model is clear, the runtime becomes easier to reason about as a sequence of responsibilities:
 
-- **Debug**: a message that reappears after processing is an acknowledgement issue, not a listener issue. Knowing which stage owns which concern narrows the search
-- **Extend**: interceptors for cross-cutting concerns, error handlers for failure policies, ack callbacks for observability. These are the intended seams
-- **Configure**: `maxConcurrentMessages` controls backpressure permits, `acknowledgementMode` controls the ack handler, and the sink follows from your queue type
-- **Reason**: the concurrency model is permit-based, not thread-based. Backpressure and throughput follow from in-flight capacity, not pool sizing
+- **Assembly time** defines how the listener is materialized: which queues it binds to, which components and configuration it is built with, and how it is registered in the application lifecycle.
+- **Ingress** balances polling and backpressure so the container can consume from SQS without overrunning the rest of the pipeline.
+- **Dispatch** determines how messages enter processing for different queue and listener semantics, without changing the overall runtime model.
+- **Processing** shapes the result through a pipeline around the listener that can intercept, transform, handle errors, and decide whether the result should move into acknowledgement.
+- **Acknowledgement** turns that result into the actual delete flow, with consequences for batching, ordering, redelivery, and performance.
 
-The common case stays simple: write a listener, let the framework handle the rest. The pipeline is there for when simple isn't enough.
+Most users do not need to think about these internals every day. But this breakdown makes it easier to understand how listener behavior is assembled, how message outcomes are determined, and where the framework’s extension points fit.
+
+For the full architectural reference, including the original diagrams and component map, see the [architectural overview](https://github.com/awspring/spring-cloud-aws/blob/main/spring-cloud-aws-sqs/README.md). For the user-facing module reference, including configuration and runtime options, see the [Spring Cloud AWS SQS documentation](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#sqs-integration).
