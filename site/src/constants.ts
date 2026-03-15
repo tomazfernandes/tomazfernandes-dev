@@ -7,6 +7,7 @@ import IconWhatsapp from "@/assets/icons/IconWhatsapp.svg";
 import IconFacebook from "@/assets/icons/IconFacebook.svg";
 import IconTelegram from "@/assets/icons/IconTelegram.svg";
 import IconPinterest from "@/assets/icons/IconPinterest.svg";
+import IconBrandAws from "@/assets/icons/IconBrandAws.svg";
 import { SITE } from "@/config";
 
 interface Social {
@@ -34,6 +35,12 @@ export const SOCIALS: Social[] = [
     href: "https://x.com/tomazfernandes_",
     linkTitle: `${SITE.title} on X`,
     icon: IconBrandX,
+  },
+  {
+    name: "AWS Community Builder",
+    href: "https://builder.aws.com/community/@tomazfernandes",
+    linkTitle: `${SITE.title} on AWS Community Builders`,
+    icon: IconBrandAws,
   },
 ] as const;
 

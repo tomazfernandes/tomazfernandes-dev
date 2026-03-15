@@ -18,17 +18,16 @@ You can:
 
 ## About the site
 
-Hi, I'm Tomaz Fernandes.
-
-I'm a software engineer based in Rio de Janeiro, Brazil, with 10+ years of experience.
+Hi, I'm Tomaz Fernandes, a software engineer based in Rio de Janeiro, Brazil, with 10+ years of experience.
 
 I write about distributed systems: reliability, observability, messaging, and shipping small, reversible, production-safe changes. This site is where I publish technical notes, mental models, and occasional deep dives.
 
 ### OSS work
 
-- Spring Cloud AWS SQS lead maintainer
-- Author of Spring Cloud AWS SQS articles on Baeldung
-- Contributor of the non-blocking delayed retries feature to Spring for Apache Kafka
+- Lead maintainer for SQS in [Spring Cloud AWS](https://docs.awspring.io/spring-cloud-aws/docs/4.0.0/reference/html/index.html#sqs-integration)
+- [AWS Community Builder](https://builder.aws.com/community/@tomazfernandes)
+- Author of Spring Cloud AWS SQS articles on [Baeldung](https://www.baeldung.com/author/tomazfernandes)
+- Contributor of the [non-blocking delayed retries](https://docs.spring.io/spring-kafka/reference/retrytopic.html) feature in Spring for Apache Kafka
 
 ## What's in this repository
 
@@ -66,7 +65,7 @@ That means you can read the posts without the site, inspect example code alongsi
 
 ## Keep in touch
 
-You can also find me on GitHub, LinkedIn, and X.
+You can also find me on [GitHub](https://github.com/tomazfernandes), [LinkedIn](https://www.linkedin.com/in/tomaz-fernandes/), and [X](https://x.com/tomazfernandes_).
 
 ## License
 

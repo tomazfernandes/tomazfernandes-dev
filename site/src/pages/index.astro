@@ -31,7 +31,8 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
           <h1 class="text-3xl font-bold sm:text-4xl">
             Pragmatic Distributed Systems
           </h1>
-          <p class="inline-flex items-center gap-2 text-lg opacity-75">by Tomaz Fernandes
+          <p class="inline-flex items-center gap-2 text-lg opacity-75">
+            by Tomaz Fernandes
             <a
               target="_blank"
               href="/rss.xml"
@@ -54,20 +55,25 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
         💻 Software Engineer, 10+ years of experience
       </p>
       <p class="mt-3">
-        🍃 <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline hover:decoration-dotted hover:underline-offset-4">Spring Cloud AWS</a> SQS lead maintainer
+        🍃 Lead maintainer for SQS in <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline hover:decoration-dotted hover:underline-offset-4">Spring Cloud AWS</a>
+      </p>
+      <p class="mt-3">
+        ☁️ <a href="https://builder.aws.com/community/@tomazfernandes" target="_blank" rel="noopener noreferrer" class="no-underline hover:underline hover:decoration-dotted hover:underline-offset-4">AWS Community Builder</a>
       </p>
       <hr class="my-3 border-border dark:opacity-30" />
       <h2 class="mt-3 text-lg font-semibold">What I write about:</h2>
       <ul class="mt-2 list-disc list-inside">
-        <li>Architecture, reliability, scalability, observability, and messaging</li>
+        <li>Distributed systems: reliability, observability, messaging, and scalability</li>
         <li>Shipping small, reversible, production-safe changes</li>
       </ul>
       <hr class="my-3 border-border dark:opacity-30" />
       <h2 class="mt-3 text-lg font-semibold">Start here:</h2>
       <a
-        href="/posts/sqs-architecture-overview/"
+        href="/posts/from-sqslistener-to-your-method/"
         class="mt-2 inline-block rounded border border-accent px-4 py-2 text-accent hover:bg-accent hover:text-background transition-colors"
-      >Spring Cloud AWS SQS: Architecture Overview</a>
+      >
+        What Happens Between @SqsListener and Your Method
+      </a>
     </section>
 
     {
@@ -115,8 +121,7 @@ const recentPosts = sortedPosts.filter(({ data }) => !data.featured);
 
 <script>
   document.addEventListener("astro:page-load", () => {
-    const indexLayout = (document.querySelector("#main-content") as HTMLElement)
-      ?.dataset?.layout;
+    const indexLayout = (document.querySelector("#main-content") as HTMLElement)?.dataset?.layout;
     if (indexLayout) {
       sessionStorage.setItem("backUrl", "/");
     }

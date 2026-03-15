@@ -7,15 +7,16 @@ title: "About"
 
 **Hi, I'm Tomaz Fernandes.**
 
-I'm a software engineer with 10+ years of experience, based in Rio de Janeiro, Brazil.
+I'm a software engineer based in Rio de Janeiro, Brazil, with 10+ years of experience building backend and distributed systems.
 
 I write about distributed systems: reliability, observability, messaging, and shipping small, reversible, production-safe changes. This site is where I publish technical notes, mental models, and occasional deep dives.
 
 ## About my OSS work
 
-- SQS lead maintainer for <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer">Spring Cloud AWS</a>.
-- Spring Cloud AWS SQS articles on Baeldung (<a href="https://www.baeldung.com/author/tomazfernandes" target="_blank" rel="noopener noreferrer">author profile</a>).
-- Contributed the <a href="https://docs.spring.io/spring-kafka/reference/retrytopic.html" target="_blank" rel="noopener noreferrer">non-blocking delayed retries</a> feature to Spring for Apache Kafka.
+- Lead maintainer for SQS in <a href="https://github.com/awspring/spring-cloud-aws" target="_blank" rel="noopener noreferrer">Spring Cloud AWS</a>.
+- <a href="https://builder.aws.com/community/@tomazfernandes" target="_blank" rel="noopener noreferrer">AWS Community Builder</a>.
+- Author of Spring Cloud AWS SQS articles on <a href="https://www.baeldung.com/author/tomazfernandes" target="_blank" rel="noopener noreferrer">Baeldung</a>.
+- Contributed the <a href="https://docs.spring.io/spring-kafka/reference/retrytopic.html" target="_blank" rel="noopener noreferrer">non-blocking delayed retries</a> feature in Spring for Apache Kafka.
 
 ## About this site
 
@@ -27,7 +28,7 @@ The site source and examples are open source. In the <a href="https://github.com
 - Runnable example projects under <a href="https://github.com/tomazfernandes/tomazfernandes-dev/tree/main/examples" target="_blank" rel="noopener noreferrer">`/examples`</a>
 - The site infrastructure under <a href="https://github.com/tomazfernandes/tomazfernandes-dev/tree/main/site" target="_blank" rel="noopener noreferrer">`/site`</a>
 
-Code samples and site source are MIT licensed.
+Code samples, examples, and site source are MIT licensed.
 
 Posts are © Tomaz Fernandes. All rights reserved.
 
