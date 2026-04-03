@@ -2,7 +2,7 @@ export const SITE = {
   website: "https://tomazfernandes.dev/",
   author: "Tomaz Fernandes",
   profile: "https://github.com/tomazfernandes",
-  desc: "Technical blog about software engineering, Spring Boot, AWS, and distributed systems.",
+  desc: "Pragmatic Distributed Systems. Software Engineer, Lead maintainer for SQS in Spring Cloud AWS, AWS Community Builder.",
   title: "Tomaz Fernandes",
   ogImage: "og.png",
   lightAndDarkMode: true,
