@@ -1,0 +1,40 @@
+sqs-architecture-overview:
+  orders-queue-name: orders-queue
+  # Each scenario makes a section of the Architecture Overview post observable at runtime.
+  # https://tomazfernandes.dev/posts/sqs-architecture-overview/
+  # Toggle them on/off to isolate individual pipeline stages.
+  scenarios:
+    # Assembly phase: shows @SqsListener annotations became live containers.
+    # Look for === Assembly Phase View === in the logs at startup.
+    assembly-view: false
+
+    # Execution envelope: before/after hooks that wrap user code.
+    interceptor:
+      logging: false
+
+    # Failure policy: what happens on exceptions and how redelivery works.
+    error-handler:
+      enabled: false
+      fail-n-times: 2
+      fail-order-id: order-1
+
+    # Acknowledgement flow: "ack is delete" — observe when SQS confirms message removal.
+    ack-callback: false
+
+
+spring:
+  application:
+    name: sqs-architecture-overview
+
+  cloud:
+    aws:
+      endpoint: http://localhost:4566
+      region:
+        static: us-east-1
+      credentials:
+        access-key: test
+        secret-key: test
+      sqs:
+        listener:
+          max-concurrent-messages: 2
+          max-messages-per-poll: 2
