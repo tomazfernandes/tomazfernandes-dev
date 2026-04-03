@@ -12,7 +12,7 @@ export const SITE = {
   showArchives: true,
   showBackButton: true,
   editPost: {
-    enabled: true,
+    enabled: false,
     text: "Edit page",
     url: "https://github.com/tomazfernandes/tomazfernandes-dev/edit/main/site/",
   },
