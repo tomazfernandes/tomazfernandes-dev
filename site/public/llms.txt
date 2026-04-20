@@ -1,0 +1,45 @@
+# Tomaz Fernandes
+
+> Technical blog by Tomaz Fernandes, software engineer based in Rio de Janeiro, Brazil. Lead maintainer for SQS in Spring Cloud AWS and AWS Community Builder. Writes about distributed systems: reliability, observability, messaging, and shipping small, reversible, production-safe changes.
+
+## About the author
+
+- **Name:** Tomaz Fernandes
+- **Role:** Software Engineer (10+ years)
+- **Location:** Rio de Janeiro, Brazil
+- **OSS:** Lead maintainer for SQS in [Spring Cloud AWS](https://github.com/awspring/spring-cloud-aws). Rewrote the SQS integration in Spring Cloud AWS 3.0.
+- **Spring contributions:** Contributed the [non-blocking delayed retries](https://docs.spring.io/spring-kafka/reference/retrytopic.html) feature in Spring for Apache Kafka.
+- **Community:** [AWS Community Builder](https://builder.aws.com/community/@tomazfernandes).
+- **Writing elsewhere:** Author of Spring Cloud AWS SQS articles on [Baeldung](https://www.baeldung.com/author/tomazfernandes).
+
+## Canonical identities
+
+- Website: https://tomazfernandes.dev/
+- GitHub: https://github.com/tomazfernandes
+- LinkedIn: https://www.linkedin.com/in/tomaz-fernandes/
+- X: https://x.com/tomazfernandes_
+- Baeldung author page: https://www.baeldung.com/author/tomazfernandes
+- AWS Community Builder profile: https://builder.aws.com/community/@tomazfernandes
+
+## What this site covers
+
+- Distributed systems: reliability, observability, messaging, scalability
+- Java and Spring-based backends
+- AWS messaging (SQS, SNS) and Spring Cloud AWS internals
+- Production-safe engineering practices
+
+## Key pages
+
+- [Home](https://tomazfernandes.dev/): landing page and recent posts
+- [About](https://tomazfernandes.dev/about/): biographical details and links
+- [All posts](https://tomazfernandes.dev/posts/): full archive
+- [Examples](https://tomazfernandes.dev/examples/): runnable example projects for selected posts
+- [RSS feed](https://tomazfernandes.dev/rss.xml)
+
+## Posts
+
+- [What Happens Between @SqsListener and Your Method](https://tomazfernandes.dev/posts/from-sqslistener-to-your-method/): walkthrough of the Spring Cloud AWS SQS message pipeline, from listener annotation through polling, conversion, invocation, acknowledgement, and error handling.
+
+## Source repository
+
+The site, posts, and example projects are open source at https://github.com/tomazfernandes/tomazfernandes-dev. Posts live in `/posts`, runnable examples in `/examples`, site source in `/site`.

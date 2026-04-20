@@ -69,6 +69,33 @@ const ogImage = ogImageUrl
   ? new URL(ogImageUrl, Astro.url.origin).href
   : undefined;
 
+const postUrlAbs = new URL(postUrl(post), Astro.site).href;
+const ogImageAbs = ogImage ?? new URL(SITE.ogImage ? `/${SITE.ogImage}` : "/og.png", Astro.site).href;
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  mainEntityOfPage: { "@type": "WebPage", "@id": postUrlAbs },
+  headline: title,
+  description,
+  image: ogImageAbs,
+  url: postUrlAbs,
+  datePublished: pubDatetime.toISOString(),
+  ...(modDatetime && { dateModified: modDatetime.toISOString() }),
+  keywords: tags,
+  author: {
+    "@type": "Person",
+    name: author,
+    url: SITE.website,
+    sameAs: SITE.sameAs,
+  },
+  publisher: {
+    "@type": "Person",
+    name: SITE.author,
+    url: SITE.website,
+  },
+};
+
 const layoutProps = {
   title: `${title} | ${SITE.title}`,
   author,
@@ -78,6 +105,8 @@ const layoutProps = {
   canonicalURL,
   ogImage,
   scrollSmooth: true,
+  pageType: "article" as const,
+  structuredData,
 };
 
 /* ========== Prev/Next Posts ========== */

@@ -9,9 +9,35 @@ import { SITE } from "@/config";
 type Props = MarkdownLayoutProps<{ title: string }>;
 
 const { frontmatter } = Astro.props;
+
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: SITE.author,
+  url: SITE.website,
+  image: new URL("/images/profile.jpeg", SITE.website).href,
+  jobTitle: "Software Engineer",
+  description: SITE.desc,
+  sameAs: SITE.sameAs,
+  knowsAbout: SITE.knowsAbout,
+  worksFor: {
+    "@type": "Organization",
+    name: "Spring Cloud AWS",
+    url: "https://awspring.io/",
+  },
+};
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "ProfilePage",
+  mainEntity: personSchema,
+};
 ---
 
-<Layout title={`${frontmatter.title} | ${SITE.title}`}>
+<Layout
+  title={`${frontmatter.title} | ${SITE.title}`}
+  structuredData={structuredData}
+>
   <Header />
   <Breadcrumb />
   <main id="main-content" class="app-layout">
