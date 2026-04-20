@@ -8,7 +8,7 @@ const REPO_ROOT = path.resolve(SITE_DIR, "..");
 
 const DEVTO_MD = path.join(
   REPO_ROOT,
-  "posts/from-sqslistener-to-your-method/devto.md"
+  "posts/from-sqslistener-to-your-method/_devto.md"
 );
 
 async function loadApiKey(): Promise<string> {

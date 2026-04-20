@@ -11,7 +11,7 @@ const POST_PATH = path.join(
 );
 const OUT_DEVTO = path.join(
   REPO_ROOT,
-  "posts/from-sqslistener-to-your-method/devto.md"
+  "posts/from-sqslistener-to-your-method/_devto.md"
 );
 const OUT_IMAGES_DIR = path.join(
   REPO_ROOT,
