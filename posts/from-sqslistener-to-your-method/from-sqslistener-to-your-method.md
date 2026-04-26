@@ -1,7 +1,7 @@
 ---
 title: "What Happens Between @SqsListener and Your Method in Spring Cloud AWS SQS"
 slug: from-sqslistener-to-your-method
-description: "A walkthrough of the full SQS listener lifecycle in Spring Cloud AWS SQS, from annotation detection at startup to the composable async pipeline that polls, processes, and acknowledges every message."
+description: "A walkthrough of the Spring Cloud AWS SQS listener lifecycle: from @SqsListener detection at startup to the async pipeline that polls and acknowledges."
 tags:
   - spring-cloud-aws
   - sqs
