@@ -70,6 +70,7 @@ const ogImage = ogImageUrl
   : undefined;
 
 const postUrlAbs = new URL(postUrl(post), Astro.site).href;
+const markdownURL = new URL(`/posts/${post.data.slug}.md`, Astro.site).href;
 const ogImageAbs = ogImage ?? new URL(SITE.ogImage ? `/${SITE.ogImage}` : "/og.png", Astro.site).href;
 
 const structuredData = {
@@ -107,6 +108,7 @@ const layoutProps = {
   scrollSmooth: true,
   pageType: "article" as const,
   structuredData,
+  markdownURL,
 };
 
 /* ========== Prev/Next Posts ========== */

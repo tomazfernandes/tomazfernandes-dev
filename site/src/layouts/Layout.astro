@@ -20,6 +20,7 @@ type Props = {
   scrollSmooth?: boolean;
   pageType?: "website" | "article";
   structuredData?: object | object[];
+  markdownURL?: string;
 };
 
 const {
@@ -33,6 +34,7 @@ const {
   scrollSmooth = false,
   pageType = "website",
   structuredData,
+  markdownURL,
 } = Astro.props;
 
 const socialImageURL = new URL(ogImage, Astro.url);
@@ -112,6 +114,12 @@ const socialImageURL = new URL(ogImage, Astro.url);
           is:inline
           set:html={JSON.stringify(structuredData)}
         />
+      )
+    }
+
+    {
+      markdownURL && (
+        <link rel="alternate" type="text/markdown" href={markdownURL} title="Markdown source" />
       )
     }
 
